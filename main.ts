@@ -82,7 +82,7 @@ namespace _PCA9685 {
     }
 }
 
-//% color=#FF6F00 icon="\uf0b1" block="RoboMorph"
+//% color=#FFC800 icon="\uf013" block="RoboMorph"
 //% groups=['Robotic Arm','Robot Dog','Otto Robot']
 namespace RoboMorph {
 
