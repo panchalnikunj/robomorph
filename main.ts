@@ -1,6 +1,7 @@
 // =====================================================
-// RoboMorph micro:bit (MakeCode) single-file extension code
-// PCA9685 + 8 servos + 3 sections: Arm / Dog / Otto
+// RoboMorph micro:bit (MakeCode) SINGLE SECTION version
+// ONE toolbox category: "RoboMorph"
+// Inside it, 4 sub-sections (groups): Core / Robotic Arm / Robot Dog / Otto Robot
 // Paste this entire code into main.ts (JavaScript view)
 // =====================================================
 
@@ -78,11 +79,17 @@ namespace _PCA9685 {
 }
 
 // =====================================================
-// SECTION: ROBO MORPH CORE (PCA9685 + servo + calibration)
+// ONE CATEGORY: RoboMorph
+// 4 GROUPS inside: Core / Robotic Arm / Robot Dog / Otto Robot
 // =====================================================
-//% color=#2D6CDF icon="\uf013" block="RoboMorph Core"
-//% groups=['Setup','Servo','Calibration','Advanced']
+
+//% color=#2D6CDF icon="\uf013" block="RoboMorph"
+//% groups=['Core','Robotic Arm','Robot Dog','Otto Robot']
 namespace RoboMorph {
+
+    // -------------------------
+    // CORE (Shared)
+    // -------------------------
     let _minUs = 500
     let _maxUs = 2500
 
@@ -100,8 +107,8 @@ namespace RoboMorph {
         return clamp(a, 0, 180)
     }
 
-    //% group="Setup"
-    //% blockId="robomorph_begin_v1" block="RoboMorph begin PCA9685 address %addr freq %freqHz Hz"
+    //% group="Core"
+    //% blockId="rm_begin" block="begin PCA9685 address %addr freq %freqHz Hz"
     //% addr.min=0 addr.max=127 freqHz.min=40 freqHz.max=100
     export function begin(addr: number = 0x40, freqHz: number = 50) {
         _PCA9685.setAddress(addr)
@@ -112,30 +119,30 @@ namespace RoboMorph {
         }
     }
 
-    //% group="Setup"
-    //% blockId="robomorph_servo_range_v1" block="Set servo pulse range min %minUs us max %maxUs us"
+    //% group="Core"
+    //% blockId="rm_servo_range" block="set servo pulse range min %minUs us max %maxUs us"
     //% minUs.min=400 minUs.max=1000 maxUs.min=2000 maxUs.max=3000
     export function setServoRange(minUs: number = 500, maxUs: number = 2500) {
         _minUs = minUs
         _maxUs = maxUs
     }
 
-    //% group="Calibration"
-    //% blockId="robomorph_set_offset_v1" block="Set servo ch %ch offset %deg °"
+    //% group="Core"
+    //% blockId="rm_set_offset" block="set servo ch %ch offset %deg °"
     //% ch.min=0 ch.max=15 deg.min=-45 deg.max=45
     export function setOffset(ch: number, deg: number) {
         _offsetDeg[ch] = deg
     }
 
-    //% group="Calibration"
-    //% blockId="robomorph_set_invert_v1" block="Invert servo ch %ch %inv"
+    //% group="Core"
+    //% blockId="rm_set_invert" block="invert servo ch %ch %inv"
     //% ch.min=0 ch.max=15
     export function setInvert(ch: number, inv: boolean) {
         _invert[ch] = inv
     }
 
-    //% group="Servo"
-    //% blockId="robomorph_servo_angle_v1" block="Servo ch %ch angle %angle °"
+    //% group="Core"
+    //% blockId="rm_servo_angle" block="servo ch %ch angle %angle °"
     //% ch.min=0 ch.max=15 angle.min=0 angle.max=180
     export function servoAngle(ch: number, angle: number) {
         const a = normAngle(ch, angle)
@@ -143,15 +150,15 @@ namespace RoboMorph {
         _PCA9685.setPulseUs(ch, pulse)
     }
 
-    //% group="Servo"
-    //% blockId="robomorph_stop_v1" block="Stop servo ch %ch"
+    //% group="Core"
+    //% blockId="rm_stop" block="stop servo ch %ch"
     //% ch.min=0 ch.max=15
     export function stop(ch: number) {
         _PCA9685.setPWM(ch, 0, 0)
     }
 
-    //% group="Advanced"
-    //% blockId="robomorph_move_smooth_v1" block="Move servo ch %ch from %fromAngle ° to %toAngle ° in %ms ms"
+    //% group="Core"
+    //% blockId="rm_move_smooth" block="move servo ch %ch from %fromAngle ° to %toAngle ° in %ms ms"
     //% ch.min=0 ch.max=15 fromAngle.min=0 fromAngle.max=180 toAngle.min=0 toAngle.max=180 ms.min=50 ms.max=5000
     export function moveSmooth(ch: number, fromAngle: number, toAngle: number, ms: number) {
         const steps = 20
@@ -161,14 +168,10 @@ namespace RoboMorph {
             basic.pause(Math.max(1, Math.idiv(ms, steps)))
         }
     }
-}
 
-// =====================================================
-// SECTION 1: ROBOTIC ARM
-// =====================================================
-//% color=#FF6F00 icon="\uf0b1" block="RoboMorph Arm"
-//% groups=['Setup','Joints','Poses','Moves']
-namespace RoboMorphArm {
+    // -------------------------
+    // ROBOTIC ARM (8 servos max)
+    // -------------------------
     export enum ArmJoint {
         //% block="Base"
         Base = 0,
@@ -200,70 +203,66 @@ namespace RoboMorphArm {
     }
 
     // default channels for arm joints: 0..7
-    let chMap: number[] = [0, 1, 2, 3, 4, 5, 6, 7]
+    let _armCh: number[] = [0, 1, 2, 3, 4, 5, 6, 7]
 
-    //% group="Setup"
-    //% blockId="arm_set_channel_v1" block="Arm set %joint channel %ch"
+    //% group="Robotic Arm"
+    //% blockId="rm_arm_set_channel" block="Arm set %joint channel %ch"
     //% ch.min=0 ch.max=15
-    export function setJointChannel(joint: ArmJoint, ch: number) {
-        chMap[joint] = ch
+    export function armSetJointChannel(joint: ArmJoint, ch: number) {
+        _armCh[joint] = ch
     }
 
-    //% group="Joints"
-    //% blockId="arm_set_joint_v1" block="Arm set %joint angle %angle °"
+    //% group="Robotic Arm"
+    //% blockId="rm_arm_set_joint" block="Arm set %joint angle %angle °"
     //% angle.min=0 angle.max=180
-    export function setJoint(joint: ArmJoint, angle: number) {
-        RoboMorph.servoAngle(chMap[joint], angle)
+    export function armSetJoint(joint: ArmJoint, angle: number) {
+        servoAngle(_armCh[joint], angle)
     }
 
-    //% group="Moves"
-    //% blockId="arm_gripper_v1" block="Arm gripper %open"
-    export function gripper(open: boolean) {
-        // tune these angles for your gripper
-        setJoint(ArmJoint.Gripper, open ? 80 : 20)
+    //% group="Robotic Arm"
+    //% blockId="rm_arm_gripper" block="Arm gripper %open"
+    export function armGripper(open: boolean) {
+        // tune these for your gripper
+        armSetJoint(ArmJoint.Gripper, open ? 80 : 20)
     }
 
-    //% group="Poses"
-    //% blockId="arm_pose_v1" block="Arm pose %pose"
-    export function pose(pose: ArmPose) {
+    //% group="Robotic Arm"
+    //% blockId="rm_arm_pose" block="Arm pose %pose"
+    export function armPose(pose: ArmPose) {
         if (pose == ArmPose.Home) {
-            setJoint(ArmJoint.Base, 90)
-            setJoint(ArmJoint.Shoulder, 90)
-            setJoint(ArmJoint.Elbow, 90)
-            setJoint(ArmJoint.Wrist, 90)
-            setJoint(ArmJoint.Gripper, 60)
+            armSetJoint(ArmJoint.Base, 90)
+            armSetJoint(ArmJoint.Shoulder, 90)
+            armSetJoint(ArmJoint.Elbow, 90)
+            armSetJoint(ArmJoint.Wrist, 90)
+            armSetJoint(ArmJoint.Gripper, 60)
         } else if (pose == ArmPose.Pick) {
-            setJoint(ArmJoint.Base, 90)
-            setJoint(ArmJoint.Shoulder, 120)
-            setJoint(ArmJoint.Elbow, 60)
-            setJoint(ArmJoint.Wrist, 90)
-            setJoint(ArmJoint.Gripper, 20)
+            armSetJoint(ArmJoint.Base, 90)
+            armSetJoint(ArmJoint.Shoulder, 120)
+            armSetJoint(ArmJoint.Elbow, 60)
+            armSetJoint(ArmJoint.Wrist, 90)
+            armSetJoint(ArmJoint.Gripper, 20)
         } else if (pose == ArmPose.Place) {
-            setJoint(ArmJoint.Base, 120)
-            setJoint(ArmJoint.Shoulder, 110)
-            setJoint(ArmJoint.Elbow, 70)
-            setJoint(ArmJoint.Wrist, 90)
-            setJoint(ArmJoint.Gripper, 80)
+            armSetJoint(ArmJoint.Base, 120)
+            armSetJoint(ArmJoint.Shoulder, 110)
+            armSetJoint(ArmJoint.Elbow, 70)
+            armSetJoint(ArmJoint.Wrist, 90)
+            armSetJoint(ArmJoint.Gripper, 80)
         } else {
             // Wave
-            setJoint(ArmJoint.Base, 90)
-            setJoint(ArmJoint.Shoulder, 80)
-            setJoint(ArmJoint.Elbow, 120)
-            setJoint(ArmJoint.Wrist, 60)
+            armSetJoint(ArmJoint.Base, 90)
+            armSetJoint(ArmJoint.Shoulder, 80)
+            armSetJoint(ArmJoint.Elbow, 120)
+            armSetJoint(ArmJoint.Wrist, 60)
             basic.pause(200)
-            setJoint(ArmJoint.Wrist, 120)
+            armSetJoint(ArmJoint.Wrist, 120)
             basic.pause(200)
-            setJoint(ArmJoint.Wrist, 60)
+            armSetJoint(ArmJoint.Wrist, 60)
         }
     }
-}
 
-// =====================================================
-// SECTION 2: ROBOT DOG (8 servos = 4 legs x 2 joints)
-// =====================================================
-//% color=#3F8E3F icon="\uf1b0" block="RoboMorph Dog"
-//% groups=['Setup','Pose','Walk','Turn']
-namespace RoboMorphDog {
+    // -------------------------
+    // ROBOT DOG (8 servos = 4 legs x 2 joints)
+    // -------------------------
     export enum DogJoint {
         //% block="Front Left Hip"
         FL_Hip = 0,
@@ -284,90 +283,83 @@ namespace RoboMorphDog {
     }
 
     // default channels for dog: 0..7
-    let chMap: number[] = [0, 1, 2, 3, 4, 5, 6, 7]
+    let _dogCh: number[] = [0, 1, 2, 3, 4, 5, 6, 7]
 
-    //% group="Setup"
-    //% blockId="dog_set_channel_v1" block="Dog set %joint channel %ch"
+    //% group="Robot Dog"
+    //% blockId="rm_dog_set_channel" block="Dog set %joint channel %ch"
     //% ch.min=0 ch.max=15
-    export function setJointChannel(joint: DogJoint, ch: number) {
-        chMap[joint] = ch
+    export function dogSetJointChannel(joint: DogJoint, ch: number) {
+        _dogCh[joint] = ch
     }
 
-    function setJ(j: DogJoint, a: number) {
-        RoboMorph.servoAngle(chMap[j], a)
+    function dogSet(j: DogJoint, a: number) {
+        servoAngle(_dogCh[j], a)
     }
 
-    //% group="Pose"
-    //% blockId="dog_stand_v1" block="Dog stand"
-    export function stand() {
-        // neutral pose (tune with RoboMorph offset/invert)
-        setJ(DogJoint.FL_Hip, 90); setJ(DogJoint.FL_Knee, 90)
-        setJ(DogJoint.FR_Hip, 90); setJ(DogJoint.FR_Knee, 90)
-        setJ(DogJoint.BL_Hip, 90); setJ(DogJoint.BL_Knee, 90)
-        setJ(DogJoint.BR_Hip, 90); setJ(DogJoint.BR_Knee, 90)
+    //% group="Robot Dog"
+    //% blockId="rm_dog_stand" block="Dog stand"
+    export function dogStand() {
+        dogSet(DogJoint.FL_Hip, 90); dogSet(DogJoint.FL_Knee, 90)
+        dogSet(DogJoint.FR_Hip, 90); dogSet(DogJoint.FR_Knee, 90)
+        dogSet(DogJoint.BL_Hip, 90); dogSet(DogJoint.BL_Knee, 90)
+        dogSet(DogJoint.BR_Hip, 90); dogSet(DogJoint.BR_Knee, 90)
     }
 
-    //% group="Pose"
-    //% blockId="dog_sit_v1" block="Dog sit"
-    export function sit() {
-        setJ(DogJoint.FL_Knee, 120)
-        setJ(DogJoint.FR_Knee, 120)
-        setJ(DogJoint.BL_Knee, 60)
-        setJ(DogJoint.BR_Knee, 60)
+    //% group="Robot Dog"
+    //% blockId="rm_dog_sit" block="Dog sit"
+    export function dogSit() {
+        dogSet(DogJoint.FL_Knee, 120)
+        dogSet(DogJoint.FR_Knee, 120)
+        dogSet(DogJoint.BL_Knee, 60)
+        dogSet(DogJoint.BR_Knee, 60)
     }
 
-    function frame(a0: number, a1: number, a2: number, a3: number, a4: number, a5: number, a6: number, a7: number, holdMs: number) {
-        setJ(DogJoint.FL_Hip, a0); setJ(DogJoint.FL_Knee, a1)
-        setJ(DogJoint.FR_Hip, a2); setJ(DogJoint.FR_Knee, a3)
-        setJ(DogJoint.BL_Hip, a4); setJ(DogJoint.BL_Knee, a5)
-        setJ(DogJoint.BR_Hip, a6); setJ(DogJoint.BR_Knee, a7)
+    function dogFrame(a0: number, a1: number, a2: number, a3: number, a4: number, a5: number, a6: number, a7: number, holdMs: number) {
+        dogSet(DogJoint.FL_Hip, a0); dogSet(DogJoint.FL_Knee, a1)
+        dogSet(DogJoint.FR_Hip, a2); dogSet(DogJoint.FR_Knee, a3)
+        dogSet(DogJoint.BL_Hip, a4); dogSet(DogJoint.BL_Knee, a5)
+        dogSet(DogJoint.BR_Hip, a6); dogSet(DogJoint.BR_Knee, a7)
         basic.pause(holdMs)
     }
 
-    //% group="Walk"
-    //% blockId="dog_walk_forward_v1" block="Dog walk forward steps %steps speed %speed"
+    //% group="Robot Dog"
+    //% blockId="rm_dog_walk_forward" block="Dog walk forward steps %steps speed %speed"
     //% steps.min=1 steps.max=30 speed.min=1 speed.max=10
-    export function walkForward(steps: number, speed: number) {
+    export function dogWalkForward(steps: number, speed: number) {
         const t = Math.idiv(220, speed) + 10
-
         for (let i = 0; i < steps; i++) {
-            // simple diagonal gait (tune with offsets/invert)
-            frame(90, 90, 90, 90, 90, 90, 90, 90, t)
-            frame(80, 70, 100, 110, 100, 110, 80, 70, t)
-            frame(90, 90, 90, 90, 90, 90, 90, 90, t)
-            frame(100, 110, 80, 70, 80, 70, 100, 110, t)
+            dogFrame(90, 90, 90, 90, 90, 90, 90, 90, t)
+            dogFrame(80, 70, 100, 110, 100, 110, 80, 70, t)
+            dogFrame(90, 90, 90, 90, 90, 90, 90, 90, t)
+            dogFrame(100, 110, 80, 70, 80, 70, 100, 110, t)
         }
     }
 
-    //% group="Turn"
-    //% blockId="dog_turn_left_v1" block="Dog turn left steps %steps speed %speed"
+    //% group="Robot Dog"
+    //% blockId="rm_dog_turn_left" block="Dog turn left steps %steps speed %speed"
     //% steps.min=1 steps.max=30 speed.min=1 speed.max=10
-    export function turnLeft(steps: number, speed: number) {
+    export function dogTurnLeft(steps: number, speed: number) {
         const t = Math.idiv(200, speed) + 10
         for (let i = 0; i < steps; i++) {
-            frame(85, 80, 95, 100, 85, 80, 95, 100, t)
-            frame(95, 100, 85, 80, 95, 100, 85, 80, t)
+            dogFrame(85, 80, 95, 100, 85, 80, 95, 100, t)
+            dogFrame(95, 100, 85, 80, 95, 100, 85, 80, t)
         }
     }
 
-    //% group="Turn"
-    //% blockId="dog_turn_right_v1" block="Dog turn right steps %steps speed %speed"
+    //% group="Robot Dog"
+    //% blockId="rm_dog_turn_right" block="Dog turn right steps %steps speed %speed"
     //% steps.min=1 steps.max=30 speed.min=1 speed.max=10
-    export function turnRight(steps: number, speed: number) {
+    export function dogTurnRight(steps: number, speed: number) {
         const t = Math.idiv(200, speed) + 10
         for (let i = 0; i < steps; i++) {
-            frame(95, 100, 85, 80, 95, 100, 85, 80, t)
-            frame(85, 80, 95, 100, 85, 80, 95, 100, t)
+            dogFrame(95, 100, 85, 80, 95, 100, 85, 80, t)
+            dogFrame(85, 80, 95, 100, 85, 80, 95, 100, t)
         }
     }
-}
 
-// =====================================================
-// SECTION 3: OTTO (4 servos default)
-// =====================================================
-//% color=#8A2BE2 icon="\uf11b" block="RoboMorph Otto"
-//% groups=['Setup','Pose','Moves']
-namespace RoboMorphOtto {
+    // -------------------------
+    // OTTO ROBOT (4 servos default)
+    // -------------------------
     export enum OttoServo {
         //% block="Left Hip"
         LH = 0,
@@ -380,56 +372,56 @@ namespace RoboMorphOtto {
     }
 
     // default channels for otto: 0..3
-    let chMap: number[] = [0, 1, 2, 3]
+    let _ottoCh: number[] = [0, 1, 2, 3]
 
-    //% group="Setup"
-    //% blockId="otto_set_channel_v1" block="Otto set %s channel %ch"
+    //% group="Otto Robot"
+    //% blockId="rm_otto_set_channel" block="Otto set %s channel %ch"
     //% ch.min=0 ch.max=15
-    export function setServoChannel(s: OttoServo, ch: number) {
-        chMap[s] = ch
+    export function ottoSetServoChannel(s: OttoServo, ch: number) {
+        _ottoCh[s] = ch
     }
 
-    function setS(s: OttoServo, a: number) {
-        RoboMorph.servoAngle(chMap[s], a)
+    function ottoSet(s: OttoServo, a: number) {
+        servoAngle(_ottoCh[s], a)
     }
 
-    //% group="Pose"
-    //% blockId="otto_home_v1" block="Otto home"
-    export function home() {
-        setS(OttoServo.LH, 90)
-        setS(OttoServo.RH, 90)
-        setS(OttoServo.LF, 90)
-        setS(OttoServo.RF, 90)
+    //% group="Otto Robot"
+    //% blockId="rm_otto_home" block="Otto home"
+    export function ottoHome() {
+        ottoSet(OttoServo.LH, 90)
+        ottoSet(OttoServo.RH, 90)
+        ottoSet(OttoServo.LF, 90)
+        ottoSet(OttoServo.RF, 90)
     }
 
-    //% group="Moves"
-    //% blockId="otto_walk_v1" block="Otto walk steps %steps speed %speed"
+    //% group="Otto Robot"
+    //% blockId="rm_otto_walk" block="Otto walk steps %steps speed %speed"
     //% steps.min=1 steps.max=30 speed.min=1 speed.max=10
-    export function walk(steps: number, speed: number) {
+    export function ottoWalk(steps: number, speed: number) {
         const t = Math.idiv(200, speed) + 10
         for (let i = 0; i < steps; i++) {
-            setS(OttoServo.LH, 80); setS(OttoServo.RH, 100)
-            setS(OttoServo.LF, 70); setS(OttoServo.RF, 110)
+            ottoSet(OttoServo.LH, 80); ottoSet(OttoServo.RH, 100)
+            ottoSet(OttoServo.LF, 70); ottoSet(OttoServo.RF, 110)
             basic.pause(t)
 
-            setS(OttoServo.LH, 100); setS(OttoServo.RH, 80)
-            setS(OttoServo.LF, 110); setS(OttoServo.RF, 70)
+            ottoSet(OttoServo.LH, 100); ottoSet(OttoServo.RH, 80)
+            ottoSet(OttoServo.LF, 110); ottoSet(OttoServo.RF, 70)
             basic.pause(t)
         }
-        home()
+        ottoHome()
     }
 
-    //% group="Moves"
-    //% blockId="otto_turn_v1" block="Otto turn %left steps %steps speed %speed"
+    //% group="Otto Robot"
+    //% blockId="rm_otto_turn" block="Otto turn %left steps %steps speed %speed"
     //% steps.min=1 steps.max=30 speed.min=1 speed.max=10
-    export function turn(left: boolean, steps: number, speed: number) {
+    export function ottoTurn(left: boolean, steps: number, speed: number) {
         const t = Math.idiv(200, speed) + 10
         for (let i = 0; i < steps; i++) {
-            if (left) { setS(OttoServo.LH, 75); setS(OttoServo.RH, 95) }
-            else { setS(OttoServo.LH, 95); setS(OttoServo.RH, 75) }
-            setS(OttoServo.LF, 90); setS(OttoServo.RF, 90)
+            if (left) { ottoSet(OttoServo.LH, 75); ottoSet(OttoServo.RH, 95) }
+            else { ottoSet(OttoServo.LH, 95); ottoSet(OttoServo.RH, 75) }
+            ottoSet(OttoServo.LF, 90); ottoSet(OttoServo.RF, 90)
             basic.pause(t)
         }
-        home()
+        ottoHome()
     }
 }
